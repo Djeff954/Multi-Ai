@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>QuizMulti · IA + relatório com nome/data e tipos de pergunta</title>
+    <!-- html2canvas para gerar imagem do relatório -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .quiz-container {
+            width: 100%;
+            max-width: 1000px;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(10px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            padding: 2rem 1.8rem;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        h1 {
+            font-size: clamp(2rem, 7vw, 3.2rem);
+            font-weight: 700;
+            background: linear-gradient(120deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .subhead {
+            color: #1e293b;
+            margin-bottom: 1.8rem;
+            border-left: 5px solid #7c3aed;
+            padding-left: 1rem;
+            background: #ede9fe;
+            border-radius: 0 1rem 1rem 0;
+            width: fit-content;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+        }
+        .api-section {
+            background: #f1f5f9;
+            border-radius: 2rem;
+            padding: 1.5rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .api-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        .provider-select {
+            flex: 1 0 160px;
+            padding: 0.9rem 1rem;
+            border-radius: 3rem;
+            border: 2px solid #cbd5e1;
+            background: white;
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .api-input {
+            flex: 4 1 260px;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 3rem;
+            font-size: 0.95rem;
+            background: white;
+            transition: 0.2s;
+        }
+        .api-input:focus {
+            border-color: #7c3aed;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+        }
+        .api-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.9rem 1.8rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: 0.15s;
+            border: 1px solid #ffffff80;
+            flex: 1 0 auto;
+        }
+        .api-btn.secondary {
+            background: #7c3aed;
+        }
+        .model-select-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+        .model-select {
+            flex: 2 1 200px;
+            padding: 0.7rem 1rem;
+            border-radius: 3rem;
+            border: 2px solid #cbd5e1;
+            background: white;
+        }
+        /* Novos controles: nome e tipo de pergunta */
+        .user-info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: #f8fafc;
+            padding: 1.2rem 1.5rem;
+            border-radius: 3rem;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+        .user-name-input {
+            flex: 2 1 200px;
+            padding: 0.9rem 1.5rem;
+            border: none;
+            background: white;
+            border-radius: 3rem;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+        }
+        .question-type-select {
+            flex: 1 1 180px;
+            padding: 0.9rem 1rem;
+            border-radius: 3rem;
+            border: 2px solid #cbd5e1;
+            background: white;
+        }
+        .theme-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-bottom: 2rem;
+            background: #f8fafc;
+            padding: 1.2rem 1.5rem;
+            border-radius: 3rem;
+            border: 1px solid #cbd5e1;
+        }
+        .theme-input {
+            flex: 3 1 220px;
+            padding: 0.9rem 1.5rem;
+            border: none;
+            background: white;
+            border-radius: 3rem;
+            font-size: 1rem;
+            outline: 2px solid transparent;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+            border: 1px solid #cbd5e1;
+        }
+        .theme-input:focus {
+            outline: 2px solid #7c3aed;
+        }
+        .btn {
+            border: none;
+            background: #7c3aed;
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 16px -6px #5b21b6;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border: 1px solid #ffffff80;
+            flex: 1 0 auto;
+        }
+        .btn-outline {
+            background: white;
+            color: #5b21b6;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid #c084fc;
+        }
+        .btn:hover { transform: scale(1.02); filter: brightness(1.05); }
+        .quiz-area { margin: 2rem 0 1.5rem; }
+        .question-card {
+            background: white;
+            border-radius: 2rem;
+            padding: 1.5rem 1.8rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 20px rgba(91, 33, 182, 0.15);
+            border: 1px solid #e9d5ff;
+        }
+        .question-text { font-size: 1.3rem; font-weight: 600; color: #0f172a; margin-bottom: 1.2rem; }
+        .options-grid { display: flex; flex-direction: column; gap: 0.8rem; }
+        .option-item {
+            display: flex; align-items: center; background: #f8fafc; border-radius: 40px;
+            padding: 0.7rem 1.2rem; border: 2px solid transparent; transition: 0.1s; cursor: pointer;
+        }
+        .option-item:hover { background: #ede9fe; border-color: #c084fc; }
+        input[type="radio"] {
+            appearance: none; width: 1.3rem; height: 1.3rem; border: 2px solid #5b21b6;
+            border-radius: 50%; margin-right: 1rem; cursor: pointer;
+        }
+        input[type="radio"]:checked { background: #5b21b6; box-shadow: inset 0 0 0 4px white; }
+        .open-answer-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 3rem;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        .open-answer-input:focus {
+            border-color: #7c3aed;
+            outline: none;
+        }
+        .option-text { font-size: 1.1rem; color: #1e293b; flex: 1; }
+        .evaluated .option-item.correct-option { background: #dcfce7; border-color: #22c55e; }
+        .evaluated .option-item.wrong-option { background: #fee2e2; border-color: #ef4444; }
+        .evaluated .open-answer-input.correct-open { border-color: #22c55e; background: #dcfce7; }
+        .evaluated .open-answer-input.wrong-open { border-color: #ef4444; background: #fee2e2; }
+        .evaluation-area {
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            margin: 2rem 0 1rem; gap: 1rem;
+        }
+        .score-board {
+            background: #ede9fe; padding: 0.8rem 2rem; border-radius: 40px;
+            font-size: 1.6rem; font-weight: 700; color: #5b21b6; border: 1px solid #c084fc;
+        }
+        .message-bar {
+            background: #f1f5f9; border-radius: 3rem; padding: 0.9rem 1.8rem;
+            color: #1e293b; font-weight: 500; border: 1px solid #cbd5e1; text-align: center;
+        }
+        .report-area {
+            margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 2rem;
+            border: 2px dashed #c084fc; display: flex; flex-direction: column; align-items: center;
+        }
+        #reportContent { width: 100%; background: white; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1rem; }
+        .download-btn {
+            background: #22c55e; color: white; border: none; padding: 0.9rem 2.5rem;
+            border-radius: 3rem; font-weight: 700; font-size: 1.1rem; cursor: pointer;
+            box-shadow: 0 4px 12px #16653480; border: 1px solid #86efac; transition: 0.15s;
+        }
+        .download-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
+        .loading { display: inline-block; width: 1.2rem; height: 1.2rem; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer-note { margin-top: 2rem; color: #94a3b8; text-align: center; }
+        .provider-note { font-size: 0.9rem; color: #475569; margin-top: 0.3rem; }
+    </style>
+</head>
+<body>
+<div class="quiz-container" id="quizContainer">
+    <h1>🤖 Gerador Multi-IA</h1>
+    <div class="subhead">Gemini/OpenAI + nome/data + tipos de pergunta</div>
+
+    <!-- Área da chave API com seletor -->
+    <div class="api-section">
+        <div class="api-row">
+            <select id="providerSelect" class="provider-select">
+                <option value="openai">OpenAI (ChatGPT)</option>
+                <option value="gemini" selected>Google Gemini (grátis)</option>
+                <option value="mock">🔧 Modo simulado</option>
+            </select>
+            <input type="password" class="api-input" id="apiKeyInput" placeholder="Cole sua chave da API aqui" value="">
+            <button class="api-btn" id="saveApiKey">💾 Salvar chave</button>
+        </div>
+        <div class="api-row">
+            <button class="api-btn secondary" id="testApiKey">🔍 Testar conexão</button>
+            <span class="provider-note" id="providerHint">⭐ Gemini 1.5 Flash (gratuito)</span>
+        </div>
+        <!-- Linha para selecionar modelo Gemini (aparece quando Gemini é selecionado) -->
+        <div class="model-select-row" id="geminiModelRow" style="display: none;">
+            <select id="geminiModelSelect" class="model-select">
+                <option value="gemini-1.5-flash">gemini-1.5-flash (recomendado)</option>
+                <option value="gemini-1.0-pro">gemini-1.0-pro (legado)</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro (pago)</option>
+            </select>
+            <span class="provider-note">Escolha o modelo (teste qual funciona)</span>
+        </div>
+    </div>
+
+    <!-- Barra de informações do usuário: nome e tipo de pergunta -->
+    <div class="user-info-bar">
+        <input type="text" class="user-name-input" id="userNameInput" placeholder="Seu nome (para o relatório)" value="Aluno">
+        <select id="questionTypeSelect" class="question-type-select">
+            <option value="multiple">Múltipla escolha</option>
+            <option value="open">Dissertativa (aberta)</option>
+            <option value="mixed">Misto (ambos)</option>
+        </select>
+    </div>
+
+    <!-- Barra de tema e ações -->
+    <div class="theme-bar">
+        <input type="text" class="theme-input" id="themeInput" placeholder="Ex: Mitologia, Física, História..." value="Animais marinhos">
+        <button class="btn" id="generateBtn">✨ Gerar perguntas</button>
+        <button class="btn btn-outline" id="evaluateBtn">✅ Avaliar</button>
+    </div>
+
+    <!-- Área das perguntas -->
+    <div id="quizArea" class="quiz-area">
+        <div class="message-bar" id="placeholderMsg">🔧 Selecione um provedor e gere.</div>
+    </div>
+
+    <!-- Painel de pontuação e feedback -->
+    <div class="evaluation-area">
+        <div class="score-board" id="scoreDisplay">0/0</div>
+        <div id="feedbackMessage" class="message-bar">Aguardando...</div>
+    </div>
+
+    <!-- Área do relatório (agora com nome e data) -->
+    <div id="reportSection" class="report-area" style="display: none;">
+        <div id="reportContent">
+            <h3 style="color:#0f172a; margin-bottom:10px;">📄 Relatório de desempenho</h3>
+            <p id="reportHeader" style="font-size:1.2rem; font-weight:600;"></p>
+            <p id="reportText" style="font-size:1.1rem;">Carregando...</p>
+            <div id="reportDetails" style="margin-top:15px;"></div>
+        </div>
+        <button class="download-btn" id="downloadReport">⬇️ Baixar relatório como imagem</button>
+    </div>
+
+    <div class="footer-note">
+        OpenAI (chave paga) ou Gemini (grátis). Teste a chave antes de gerar.
+    </div>
+</div>
+
+<script>
+(function() {
+    // --- elementos DOM ---
+    const providerSelect = document.getElementById('providerSelect');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const saveApiBtn = document.getElementById('saveApiKey');
+    const testApiBtn = document.getElementById('testApiKey');
+    const providerHint = document.getElementById('providerHint');
+    const geminiModelRow = document.getElementById('geminiModelRow');
+    const geminiModelSelect = document.getElementById('geminiModelSelect');
+    const userNameInput = document.getElementById('userNameInput');
+    const questionTypeSelect = document.getElementById('questionTypeSelect');
+    const themeInput = document.getElementById('themeInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const evaluateBtn = document.getElementById('evaluateBtn');
+    const quizArea = document.getElementById('quizArea');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const feedbackMessage = document.getElementById('feedbackMessage');
+    const reportSection = document.getElementById('reportSection');
+    const reportHeader = document.getElementById('reportHeader');
+    const reportText = document.getElementById('reportText');
+    const reportDetails = document.getElementById('reportDetails');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // --- estado ---
+    let currentProvider = localStorage.getItem('quiz_provider') || 'gemini';
+    let apiKey = localStorage.getItem('quiz_api_key') || '';
+    let availableModels = [];
+
+    providerSelect.value = currentProvider;
+    if (apiKey) apiKeyInput.value = apiKey;
+    updateProviderHint();
+    toggleGeminiModelRow();
+
+    // --- estado das perguntas ---
+    let currentQuestions = []; // array de { question, options? (array), correct (índice ou string), type: 'multiple'|'open' }
+    let userAnswers = []; // para multiple: índice; para open: string
+    let evaluated = false;
+
+    // --- funções auxiliares ---
+    function updateProviderHint() {
+        const prov = providerSelect.value;
+        if (prov === 'openai') {
+            providerHint.innerText = '🔑 Chave OpenAI (sk-...) – modelo gpt-3.5-turbo';
+            geminiModelRow.style.display = 'none';
+        } else if (prov === 'gemini') {
+            providerHint.innerText = '🔑 Chave Gemini (Google AI Studio) – selecione o modelo abaixo';
+            geminiModelRow.style.display = 'flex';
+        } else {
+            providerHint.innerText = '🛠️ Modo simulado: gera perguntas locais (sem API)';
+            geminiModelRow.style.display = 'none';
+        }
+    }
+
+    function toggleGeminiModelRow() {
+        geminiModelRow.style.display = providerSelect.value === 'gemini' ? 'flex' : 'none';
+    }
+
+    providerSelect.addEventListener('change', () => {
+        currentProvider = providerSelect.value;
+        localStorage.setItem('quiz_provider', currentProvider);
+        updateProviderHint();
+        toggleGeminiModelRow();
+    });
+
+    function setFeedback(msg, isError = false) {
+        feedbackMessage.textContent = msg;
+        feedbackMessage.style.background = isError ? '#fee2e2' : '#f1f5f9';
+    }
+
+    // Atualiza a pontuação considerando os diferentes tipos
+    function updateScore() {
+        if (!currentQuestions.length) {
+            scoreDisplay.textContent = '0/0';
+            return 0;
+        }
+        let correctCount = 0;
+        currentQuestions.forEach((q, idx) => {
+            const userAns = userAnswers[idx];
+            if (userAns === undefined || userAns === null) return;
+            if (q.type === 'multiple') {
+                if (userAns === q.correct) correctCount++;
+            } else if (q.type === 'open') {
+                // comparação simples: ignora maiúsculas/minúsculas e espaços extras
+                const normalize = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                if (normalize(userAns) === normalize(q.correctAnswer)) correctCount++;
+            }
+        });
+        scoreDisplay.textContent = `${correctCount}/${currentQuestions.length}`;
+        return correctCount;
+    }
+
+    // Renderizar perguntas conforme o tipo
+    function renderQuestions(preserveAnswers = false) {
+        if (!currentQuestions || currentQuestions.length === 0) {
+            quizArea.innerHTML = `<div class="message-bar">📭 Nenhuma pergunta. Clique em Gerar.</div>`;
+            reportSection.style.display = 'none';
+            return;
+        }
+
+        if (!preserveAnswers) {
+            userAnswers = new Array(currentQuestions.length).fill(null);
+            evaluated = false;
+        } else if (userAnswers.length !== currentQuestions.length) {
+            const newAns = new Array(currentQuestions.length).fill(null);
+            for (let i=0; i<Math.min(userAnswers.length, currentQuestions.length); i++) newAns[i] = userAnswers[i];
+            userAnswers = newAns;
+        }
+
+        let html = '';
+        currentQuestions.forEach((q, qIdx) => {
+            html += `<div class="question-card" data-qindex="${qIdx}" data-type="${q.type}">`;
+            html += `<div class="question-text">${qIdx+1}. ${q.question}</div>`;
+
+            if (q.type === 'multiple') {
+                html += `<div class="options-grid">`;
+                q.options.forEach((opt, optIdx) => {
+                    const checked = (userAnswers[qIdx] === optIdx) ? 'checked' : '';
+                    const disabled = evaluated ? 'disabled' : '';
+                    html += `
+                        <div class="option-item" data-optindex="${optIdx}" data-parent="${qIdx}">
+                            <input type="radio" name="q_${qIdx}" value="${optIdx}" ${checked} ${disabled}>
+                            <span class="option-text">${opt}</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            } else if (q.type === 'open') {
+                const value = (userAnswers[qIdx] !== null) ? userAnswers[qIdx] : '';
+                const disabled = evaluated ? 'disabled' : '';
+                html += `<input class="open-answer-input" type="text" placeholder="Digite sua resposta" data-qindex="${qIdx}" value="${value.replace(/"/g, '&quot;')}" ${disabled}>`;
+            }
+            html += `</div>`;
+        });
+        quizArea.innerHTML = html;
+
+        // Adicionar listeners
+        if (!evaluated) {
+            // radios
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', function(e) {
+                    const name = this.name;
+                    const qIdx = parseInt(name.split('_')[1]);
+                    userAnswers[qIdx] = parseInt(this.value);
+                });
+            });
+            // inputs abertos
+            document.querySelectorAll('.open-answer-input').forEach(input => {
+                input.addEventListener('input', function(e) {
+                    const qIdx = parseInt(this.dataset.qindex);
+                    userAnswers[qIdx] = this.value;
+                });
+            });
+        } else {
+            applyEvaluationColors();
+        }
+        updateScore();
+        if (!evaluated) setFeedback('✏️ Responda e clique em Avaliar.');
+    }
+
+    // Aplicar cores de acerto/erro após avaliação
+    function applyEvaluationColors() {
+        document.querySelectorAll('.option-item').forEach(el => el.classList.remove('correct-option', 'wrong-option'));
+        document.querySelectorAll('.open-answer-input').forEach(el => el.classList.remove('correct-open', 'wrong-open'));
+
+        currentQuestions.forEach((q, qIdx) => {
+            const card = document.querySelector(`.question-card[data-qindex="${qIdx}"]`);
+            if (!card) return;
+            const userAns = userAnswers[qIdx];
+            if (q.type === 'multiple') {
+                const items = card.querySelectorAll('.option-item');
+                items.forEach((item, idx) => {
+                    if (idx === q.correct) item.classList.add('correct-option');
+                    if (userAns !== null && userAns === idx && idx !== q.correct) {
+                        item.classList.add('wrong-option');
+                    }
+                });
+            } else if (q.type === 'open') {
+                const input = card.querySelector('.open-answer-input');
+                if (input) {
+                    const normalize = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                    const isCorrect = (userAns !== null && normalize(userAns) === normalize(q.correctAnswer));
+                    if (isCorrect) {
+                        input.classList.add('correct-open');
+                    } else if (userAns !== null) {
+                        input.classList.add('wrong-open');
+                    }
+                }
+            }
+        });
+        document.querySelectorAll('input[type="radio"], .open-answer-input').forEach(r => r.disabled = true);
+        evaluated = true;
+    }
+
+    // Gerar relatório com nome, data e nota
+    function generateReport() {
+        if (!currentQuestions.length) return;
+        const correctCount = updateScore();
+        const total = currentQuestions.length;
+        const percent = total ? Math.round((correctCount/total)*100) : 0;
+        const userName = userNameInput.value.trim() || 'Aluno';
+        const today = new Date();
+        const dateStr = today.toLocaleDateString('pt-BR'); // dd/mm/aaaa
+
+        reportHeader.innerHTML = `👤 ${userName}  •  📅 ${dateStr}`;
+        reportText.innerHTML = `Tema: ${themeInput.value}  •  Pontuação: ${correctCount}/${total} (${percent}%)`;
+
+        let detailsHtml = `<ul style="text-align:left; margin-top:1rem;">`;
+        currentQuestions.forEach((q, i) => {
+            const userAns = userAnswers[i];
+            let userAnsText = 'Não respondida';
+            let correctAnsText = '';
+            let isCorrect = false;
+
+            if (q.type === 'multiple') {
+                if (userAns !== null) userAnsText = q.options[userAns];
+                correctAnsText = q.options[q.correct];
+                isCorrect = (userAns === q.correct);
+            } else {
+                if (userAns !== null) userAnsText = userAns;
+                correctAnsText = q.correctAnswer;
+                const normalize = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                isCorrect = (userAns !== null && normalize(userAns) === normalize(correctAnsText));
+            }
+
+            detailsHtml += `<li style="margin-bottom:0.8rem; border-bottom:1px solid #e2e8f0; padding-bottom:0.5rem;">`;
+            detailsHtml += `<strong>${i+1}. ${q.question}</strong><br>`;
+            detailsHtml += `Sua resposta: ${userAnsText} ${isCorrect ? '✅' : '❌'}<br>`;
+            if (!isCorrect) detailsHtml += `Resposta correta: ${correctAnsText}<br>`;
+            detailsHtml += `</li>`;
+        });
+        detailsHtml += `</ul>`;
+        reportDetails.innerHTML = detailsHtml;
+    }
+
+    // --- Gerar perguntas via IA ou modo simulado ---
+    async function generateQuestions(theme) {
+        const provider = providerSelect.value;
+        const key = apiKeyInput.value.trim() || apiKey;
+        const questionType = questionTypeSelect.value; // 'multiple', 'open', 'mixed'
+
+        // Modo simulado
+        if (provider === 'mock') {
+            setFeedback('🔄 Gerando perguntas simuladas...');
+            await new Promise(r => setTimeout(r, 800));
+            // Gerar conforme o tipo escolhido (simulado simples)
+            if (questionType === 'multiple') {
+                currentQuestions = [
+                    { type: 'multiple', question: `Qual animal é conhecido como "rei da selva"?`, options: ['Elefante', 'Leão', 'Tigre', 'Girafa'], correct: 1 },
+                    { type: 'multiple', question: `Onde vivem os pinguins?`, options: ['Ártico', 'Antártida', 'Floresta Amazônica', 'Deserto'], correct: 1 },
+                    { type: 'multiple', question: `Qual é o maior mamífero do mundo?`, options: ['Elefante africano', 'Baleia-azul', 'Girafa', 'Orca'], correct: 1 },
+                ];
+            } else if (questionType === 'open') {
+                currentQuestions = [
+                    { type: 'open', question: `Qual é o animal conhecido como "rei da selva"?`, correctAnswer: 'Leão' },
+                    { type: 'open', question: `Onde vivem os pinguins?`, correctAnswer: 'Antártida' },
+                    { type: 'open', question: `Qual é o maior mamífero do mundo?`, correctAnswer: 'Baleia-azul' },
+                ];
+            } else {
+                // mixed
+                currentQuestions = [
+                    { type: 'multiple', question: `Qual animal é conhecido como "rei da selva"?`, options: ['Elefante', 'Leão', 'Tigre', 'Girafa'], correct: 1 },
+                    { type: 'open', question: `Onde vivem os pinguins?`, correctAnswer: 'Antártida' },
+                    { type: 'multiple', question: `Qual é o maior mamífero do mundo?`, options: ['Elefante africano', 'Baleia-azul', 'Girafa', 'Orca'], correct: 1 },
+                ];
+            }
+            renderQuestions(false);
+            reportSection.style.display = 'none';
+            setFeedback(`✔️ Modo simulado: ${currentQuestions.length} perguntas geradas.`);
+            return;
+        }
+
+        if (!key) {
+            setFeedback(`🔑 Insira a chave da API para ${provider}`, true);
+            return;
+        }
+        apiKey = key;
+        localStorage.setItem('quiz_api_key', key);
+
+        setFeedback(`🔄 Gerando perguntas com ${provider}... aguarde.`);
+        quizArea.innerHTML = `<div class="message-bar"><span class="loading"></span>  Gerando com IA...</div>`;
+
+        // Construir prompt conforme o tipo
+        let typeInstruction = '';
+        if (questionType === 'multiple') {
+            typeInstruction = `Todas as perguntas devem ser de múltipla escolha com 4 opções. 
+Formato: cada pergunta deve ter "type": "multiple", "question", "options": array de 4 strings, "correct": índice da opção correta (0-3).`;
+        } else if (questionType === 'open') {
+            typeInstruction = `Todas as perguntas devem ser dissertativas (abertas), ou seja, o usuário digitará a resposta. 
+Formato: cada pergunta deve ter "type": "open", "question", "correctAnswer": string com a resposta esperada (breve).`;
+        } else {
+            typeInstruction = `As perguntas devem ser uma mistura de múltipla escolha e dissertativas (abertas). 
+Para múltipla escolha: "type": "multiple", "question", "options": array de 4 strings, "correct": índice.
+Para dissertativas: "type": "open", "question", "correctAnswer": string.`;
+        }
+
+        const prompt = `Crie um questionário com 5 perguntas de nível variado sobre o tema: "${theme}".
+${typeInstruction}
+Retorne APENAS um array JSON válido no seguinte formato (sem texto extra):
+[
+  {
+    "type": "multiple" ou "open",
+    "question": "texto da pergunta",
+    // se multiple:
+    "options": ["opção A", "opção B", "opção C", "opção D"],
+    "correct": indice (0 a 3),
+    // se open:
+    "correctAnswer": "resposta esperada"
+  }
+]`;
+
+        try {
+            let questions;
+            if (provider === 'openai') {
+                questions = await callOpenAI(key, prompt);
+            } else if (provider === 'gemini') {
+                const selectedModel = geminiModelSelect.value;
+                questions = await callGemini(key, prompt, selectedModel);
+            } else {
+                throw new Error('Provedor desconhecido');
+            }
+
+            if (!Array.isArray(questions) || questions.length === 0) throw new Error('Formato inválido');
+            // Validar estrutura básica
+            questions.forEach((q, idx) => {
+                if (!q.question) throw new Error(`Pergunta ${idx+1} sem questão`);
+                if (q.type === 'multiple') {
+                    if (!Array.isArray(q.options) || q.options.length !== 4 || typeof q.correct !== 'number')
+                        throw new Error(`Pergunta ${idx+1} mal formatada (multiple)`);
+                } else if (q.type === 'open') {
+                    if (!q.correctAnswer) throw new Error(`Pergunta ${idx+1} sem resposta correta (open)`);
+                } else {
+                    throw new Error(`Pergunta ${idx+1} com tipo inválido: ${q.type}`);
+                }
+            });
+
+            currentQuestions = questions;
+            evaluated = false;
+            renderQuestions(false);
+            reportSection.style.display = 'none';
+            setFeedback(`✔️ ${questions.length} perguntas geradas sobre "${theme}" (${provider})`);
+        } catch (error) {
+            console.error(error);
+            quizArea.innerHTML = `<div class="message-bar" style="background:#fee2e2;">❌ Erro: ${error.message}</div>`;
+            setFeedback(`Falha na geração (${provider})`, true);
+        }
+    }
+
+    // --- Chamada OpenAI ---
+    async function callOpenAI(apiKey, prompt) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.7,
+                max_tokens: 1500
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `Erro HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content.trim();
+        return extractJSON(content);
+    }
+
+    // --- Chamada Gemini ---
+    async function callGemini(apiKey, prompt, model) {
+        const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Gemini error: ${err}`);
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error('Resposta vazia da Gemini');
+        return extractJSON(text);
+    }
+
+    // Extrai JSON da resposta
+    function extractJSON(str) {
+        let jsonStr = str;
+        const jsonMatch = str.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (jsonMatch) jsonStr = jsonMatch[1];
+        else {
+            const arrayMatch = str.match(/\[[\s\S]*\]/);
+            if (arrayMatch) jsonStr = arrayMatch[0];
+        }
+        return JSON.parse(jsonStr);
+    }
+
+    // --- Teste de conexão (igual ao anterior) ---
+    async function testConnection() {
+        const provider = providerSelect.value;
+        const key = apiKeyInput.value.trim() || apiKey;
+        if (provider === 'mock') {
+            setFeedback('✅ Modo simulado sempre disponível', false);
+            return;
+        }
+        if (!key) { setFeedback('Insira a chave primeiro', true); return; }
+        setFeedback(`🔍 Testando ${provider}...`, false);
+        try {
+            if (provider === 'openai') {
+                const res = await fetch('https://api.openai.com/v1/models', {
+                    headers: { 'Authorization': `Bearer ${key}` }
+                });
+                if (res.ok) setFeedback('✅ OpenAI: chave válida!', false);
+                else setFeedback('❌ OpenAI: chave inválida', true);
+            } else if (provider === 'gemini') {
+                const url = `https://generativelanguage.googleapis.com/v1/models?key=${key}`;
+                const res = await fetch(url);
+                if (!res.ok) {
+                    const err = await res.text();
+                    setFeedback(`❌ Gemini: ${err}`, true);
+                    return;
+                }
+                const data = await res.json();
+                const models = data.models || [];
+                const supported = models.filter(m => m.supportedGenerationMethods?.includes('generateContent'));
+                if (supported.length === 0) {
+                    setFeedback('⚠️ Chave válida, mas nenhum modelo com generateContent', true);
+                } else {
+                    const modelNames = supported.map(m => m.name.replace('models/', '')).join(', ');
+                    setFeedback(`✅ Gemini: chave válida! Modelos: ${modelNames}`, false);
+                    updateGeminiModelSelect(supported);
+                }
+            }
+        } catch (e) {
+            setFeedback('Erro de rede: ' + e.message, true);
+        }
+    }
+
+    function updateGeminiModelSelect(models) {
+        const select = geminiModelSelect;
+        select.innerHTML = '';
+        models.forEach(m => {
+            const modelName = m.name.replace('models/', '');
+            const option = document.createElement('option');
+            option.value = modelName;
+            option.textContent = modelName;
+            select.appendChild(option);
+        });
+    }
+
+    // --- Event listeners ---
+    saveApiBtn.addEventListener('click', () => {
+        const key = apiKeyInput.value.trim();
+        if (key) {
+            apiKey = key;
+            localStorage.setItem('quiz_api_key', key);
+            setFeedback('✔️ Chave salva', false);
+        } else {
+            setFeedback('Digite uma chave', true);
+        }
+    });
+
+    testApiBtn.addEventListener('click', testConnection);
+
+    generateBtn.addEventListener('click', async () => {
+        const theme = themeInput.value.trim();
+        if (!theme) { setFeedback('Digite um tema', true); return; }
+        await generateQuestions(theme);
+    });
+
+    evaluateBtn.addEventListener('click', () => {
+        if (!currentQuestions.length) {
+            setFeedback('Gere um questionário primeiro', true);
+            return;
+        }
+        const unanswered = userAnswers.some(a => a === null || a === '');
+        if (unanswered && !confirm('Algumas perguntas não foram respondidas. Avaliar mesmo assim?')) return;
+
+        evaluated = true;
+        applyEvaluationColors();
+        const correct = updateScore();
+        setFeedback(`🎯 Você acertou ${correct} de ${currentQuestions.length}.`);
+
+        generateReport();
+        reportSection.style.display = 'flex';
+    });
+
+    // Download do relatório como imagem
+    downloadBtn.addEventListener('click', () => {
+        const element = document.getElementById('reportContent');
+        // Garantir que o elemento esteja visível e com fundo branco
+        html2canvas(element, { 
+            scale: 1.5, 
+            backgroundColor: '#ffffff',
+            logging: false,
+            allowTaint: false,
+            useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `relatorio_${userNameInput.value.trim() || 'aluno'}_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error('Erro ao gerar imagem:', err);
+            alert('Erro ao gerar a imagem. Tente novamente.');
+        });
+    });
+
+    // Inicialização
+    updateProviderHint();
+})();
+</script>
+</body>
+</html>
