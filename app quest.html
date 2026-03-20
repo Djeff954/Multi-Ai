@@ -120,7 +120,6 @@
             border: 2px solid #cbd5e1;
             background: white;
         }
-        /* Novos controles: nome e tipo de pergunta */
         .user-info-bar {
             display: flex;
             flex-wrap: wrap;
@@ -250,7 +249,14 @@
             margin-top: 2rem; padding: 1.5rem; background: #f8fafc; border-radius: 2rem;
             border: 2px dashed #c084fc; display: flex; flex-direction: column; align-items: center;
         }
-        #reportContent { width: 100%; background: white; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1rem; }
+        #reportContent {
+            width: 100%;
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
         .download-btn {
             background: #22c55e; color: white; border: none; padding: 0.9rem 2.5rem;
             border-radius: 3rem; font-weight: 700; font-size: 1.1rem; cursor: pointer;
@@ -836,25 +842,54 @@ Retorne APENAS um array JSON válido no seguinte formato (sem texto extra):
         reportSection.style.display = 'flex';
     });
 
-    // Download do relatório como imagem
-    downloadBtn.addEventListener('click', () => {
+    // *** CORREÇÃO DO DOWNLOAD ***
+    downloadBtn.addEventListener('click', async () => {
+        if (typeof html2canvas === 'undefined') {
+            alert('Erro: biblioteca html2canvas não carregada. Recarregue a página.');
+            return;
+        }
+
         const element = document.getElementById('reportContent');
-        // Garantir que o elemento esteja visível e com fundo branco
-        html2canvas(element, { 
-            scale: 1.5, 
-            backgroundColor: '#ffffff',
-            logging: false,
-            allowTaint: false,
-            useCORS: true
-        }).then(canvas => {
+        if (!element) {
+            alert('Elemento do relatório não encontrado.');
+            return;
+        }
+
+        // Indicador visual
+        const originalText = downloadBtn.innerText;
+        downloadBtn.innerText = '📸 Gerando imagem...';
+        downloadBtn.disabled = true;
+
+        try {
+            // Pequeno delay para garantir layout estável
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: true,   // Ativa logs no console (F12)
+                useCORS: false,
+                allowTaint: false,
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight
+            });
+
             const link = document.createElement('a');
-            link.download = `relatorio_${userNameInput.value.trim() || 'aluno'}_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
+            const dataURL = canvas.toDataURL('image/png');
+            const nome = userNameInput.value.trim() || 'aluno';
+            link.download = `relatorio_${nome}_${Date.now()}.png`;
+            link.href = dataURL;
             link.click();
-        }).catch(err => {
+
+            setFeedback('✅ Relatório baixado com sucesso!', false);
+        } catch (err) {
             console.error('Erro ao gerar imagem:', err);
-            alert('Erro ao gerar a imagem. Tente novamente.');
-        });
+            alert(`Falha ao gerar a imagem: ${err.message || 'Erro desconhecido'}\n\nVerifique o console (F12) para mais detalhes.`);
+            setFeedback('❌ Erro ao gerar imagem. Veja o console.', true);
+        } finally {
+            downloadBtn.innerText = originalText;
+            downloadBtn.disabled = false;
+        }
     });
 
     // Inicialização
